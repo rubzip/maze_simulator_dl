@@ -131,6 +131,6 @@ def process_data(mazes_df, sequences_df, width: int):
 
     sequences_df = augment_sequences(sequences_df, width)
     sequences_df = balance_dataset(sequences_df, group_cols)
-    sequences_df = build_df(mazes_df.set_index("maze_id"), sequences_df)
+    sequences_df = build_dataset(mazes_df.set_index("maze_id"), sequences_df)
 
     return mazes_df, sequences_df
