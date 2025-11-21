@@ -4,7 +4,7 @@ import torch
 from pathlib import Path
 
 from settings import DATA_PATH, DATASET_PATH
-from .utils import augment_sequences, augment_mazes, balance_dataset, build_df
+from .utils import augment_sequences, augment_mazes, balance_dataset, build_dataset
 
 
 if __name__ == "__main__":
@@ -48,11 +48,12 @@ if __name__ == "__main__":
         stratify=train_val_sequences_balanced["stratify_key"]
     )
 
-    train = build_df(train_mazes_augmented.set_index("maze_id"), train_sequences_balanced)
-    test = build_df(test_mazes_augmented.set_index("maze_id"), test_sequences_balanced)
-    val = build_df(train_mazes_augmented.set_index("maze_id"), val_sequences_balanced)
+    train = build_dataset(train_mazes_augmented.set_index("maze_id"), train_sequences_balanced)
+    test = build_dataset(test_mazes_augmented.set_index("maze_id"), test_sequences_balanced)
+    val = build_dataset(train_mazes_augmented.set_index("maze_id"), val_sequences_balanced)
 
     Path(DATASET_PATH).mkdir(parents=True, exist_ok=True)
-    train.to_pickle(Path(DATASET_PATH) / 'train.pkl')
-    test.to_pickle(Path(DATASET_PATH) / 'test.pkl')
-    val.to_pickle(Path(DATASET_PATH) / 'val.pkl')
+    torch.save(train, Path(DATASET_PATH) / "train.pt")
+    torch.save(test, Path(DATASET_PATH) / "test.pt")
+    torch.save(val, Path(DATASET_PATH) / "val.pt")
+    

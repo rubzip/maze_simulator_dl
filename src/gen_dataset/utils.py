@@ -3,14 +3,29 @@ from pathlib import Path
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from torch.utils.data import TensorDataset
 from sklearn.model_selection import train_test_split
 
 
+ACTION_TO_IDX = {
+    "up": 0, 
+    "right": 1,
+    "down": 2, 
+    "left": 3
+}
+
+IDX_TO_ACTION = {
+    0: "up", 
+    1: "right",
+    2: "down", 
+    3: "left"
+}
+
+
 def rotate_action(action: str, rotation: int) -> str:
-    action_set = ["up", "right", "down", "left"]
-    idx = action_set.index(action)
+    idx = ACTION_TO_IDX[action]
     new_idx = (idx + rotation) % 4
-    return action_set[new_idx]
+    return IDX_TO_ACTION[new_idx]
 
 
 def rotate_pos(pos: tuple[int, int], rotation: int, width: int) -> tuple[int, int]:
@@ -35,14 +50,7 @@ def augment_sequences(sequences: pd.DataFrame, width: int) -> pd.DataFrame:
         aux["action"] = aux["action"].apply(lambda a: rotate_action(a, rotation))
         augmented_sequences = pd.concat([augmented_sequences, aux], ignore_index=True)
 
-    action_to_idx = {
-        "up": 0, 
-        "right": 1,
-        "down": 2, 
-        "left": 3
-    }
-
-    augmented_sequences["action"] = augmented_sequences["action"].map(action_to_idx)
+    augmented_sequences["action"] = augmented_sequences["action"].map(ACTION_TO_IDX)
     return augmented_sequences
 
 
@@ -76,22 +84,30 @@ def build_state(maze: torch.Tensor, pos: tuple[int, int]) -> torch.Tensor:
     return maze_out
 
 
-def build_df(mazes_df: pd.DataFrame, sequences_df: pd.DataFrame) -> pd.DataFrame:
-    data = []
+def build_dataset(mazes_df: pd.DataFrame, sequences_df: pd.DataFrame, num_classes=3, num_actions=4) -> TensorDataset:
+    x_list, y_list, a_list = [], [], []
 
     for _, row in sequences_df.iterrows():
         maze_tensor = mazes_df.loc[row["maze_id"], "maze"]
-
+        
         prev_state = build_state(maze_tensor, row["player_pos"])
         actual_state = build_state(maze_tensor, row["new_pos"])
-        
-        data.append({
-            "prev_state": prev_state,
-            "action": row["action"],
-            "actual_state": actual_state
-        })
-    return pd.DataFrame(data)
+        action = row["action"]
 
+        x_tensor = F.one_hot(torch.tensor(prev_state, dtype=torch.long), num_classes=num_classes)
+        y_tensor = torch.tensor(actual_state, dtype=torch.long)
+        a_tensor = F.one_hot(torch.tensor(action), num_classes=num_actions)
+
+        x_list.append(x_tensor)
+        y_list.append(y_tensor)
+        a_list.append(a_tensor)
+
+    x_tensor = torch.stack(x_list).permute(0, 3, 1, 2).to(torch.float)
+    y_tensor = torch.stack(y_list)
+    a_tensor = torch.stack(a_list).to(torch.float)
+
+    dataset = TensorDataset(x_tensor, a_tensor, y_tensor)
+    return dataset
 
 def load_data(path_mazes: str, path_sequences: str):
     mazes_df = pd.read_pickle(Path(path_mazes))
