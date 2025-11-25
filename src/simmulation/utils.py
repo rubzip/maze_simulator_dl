@@ -54,7 +54,7 @@ class Game:
 
     def check_reset(self):
             keys = pygame.key.get_pressed()
-            if keys[pygame.K_SPACE]:
+            if keys[pygame.K_r]:
                 self.__init__(self.strategy, self.width)
             if keys[pygame.K_q]:
                 self.running = False
