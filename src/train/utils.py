@@ -51,7 +51,7 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
 
         es(val_loss, model)
         if es.early_stop:
-            print("⏹️ Early stopping")
+            print("Early stopping")
             break
     
     epoch = es.epoch - es.epochs_without_improvement
