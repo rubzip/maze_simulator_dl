@@ -12,8 +12,12 @@ from .utils import train, eval
 from settings import WIDTH, WALL_PROB
 
 BATCH_SIZE = 32
-NUM_EPOCHS = 20
+NUM_EPOCHS = 1_000
 NUM_CLASSES = 3
+
+L2 = 1e-5
+LR = 1e-3
+PATIENCE = 10
 
 TRAIN = "./dataset/train.pt"
 TEST = "./dataset/test.pt"
@@ -30,10 +34,6 @@ if __name__ == "__main__":
     test_ds = torch.load(TEST, weights_only=False)
     val_ds = torch.load(VAL, weights_only=False)
 
-    train_ds = TensorDataset(*train_ds[:1000])
-    test_ds = TensorDataset(*test_ds[:100])
-    val_ds = TensorDataset(*val_ds[:200])
-
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
     val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False)
@@ -42,10 +42,10 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = GameUNet(n_classes=3, n_actions=4).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=L2)
     weights_tensor = torch.tensor(class_weight, dtype=torch.float32).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights_tensor).to(device)
-    es = EarlyStopping(patience=10)
+    es = EarlyStopping(patience=PATIENCE)
 
     model, epoch = train(model=model, train_loader=train_loader, val_loader=val_loader, optimizer=optimizer, criterion=criterion, es=es, device=device, num_epochs=NUM_EPOCHS, num_classes=NUM_CLASSES)
     metrics = eval(model=model, train_loader=train_loader, test_loader=test_loader, val_loader=val_loader, criterion=criterion, device=device, num_classes=NUM_CLASSES)
